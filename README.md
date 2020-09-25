@@ -1,5 +1,10 @@
 # StoreLocator-mapbox-js
 
+## Used Technology
+
+- Mapbox
+- Javascript
+
 ### This testing folder include:
 
 - Store Locator App
