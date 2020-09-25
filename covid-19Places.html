@@ -1,0 +1,362 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MyanmarCovid19Map</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.9.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.9.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body data-gr-c-s-loaded="true" cz-shortcut-listen="true">
+    <div id="map" class="mapboxgl-map">
+      <div class="mapboxgl-canary" style="visibility: hidden;"></div>
+      <div
+        class="mapboxgl-canvas-container mapboxgl-interactive mapboxgl-touch-drag-pan mapboxgl-touch-zoom-rotate"
+      >
+        <canvas
+          class="mapboxgl-canvas"
+          tabindex="0"
+          aria-label="Map"
+          width="1440"
+          height="417"
+          style="width: 1440px; height: 417px;"
+        ></canvas>
+      </div>
+      <div class="mapboxgl-control-container">
+        <div class="mapboxgl-ctrl-top-left"></div>
+        <div class="mapboxgl-ctrl-top-right"></div>
+        <div class="mapboxgl-ctrl-bottom-left">
+          <div class="mapboxgl-ctrl" style="display: block;">
+            <a
+              class="mapboxgl-ctrl-logo"
+              target="_blank"
+              rel="noopener nofollow"
+              href="https://www.mapbox.com/"
+              aria-label="Mapbox logo"
+            ></a>
+          </div>
+        </div>
+        <div class="mapboxgl-ctrl-bottom-right">
+          <div class="mapboxgl-ctrl mapboxgl-ctrl-attrib">
+            <div class="mapboxgl-ctrl-attrib-inner">
+              <a href="https://www.mapbox.com/about/maps/" target="_blank"
+                >© Mapbox</a
+              >
+              <a href="http://www.openstreetmap.org/about/" target="_blank"
+                >© OpenStreetMap</a
+              >
+              <a
+                class="mapbox-improve-map"
+                href="https://apps.mapbox.com/feedback/?owner=hanminsein&amp;id=ck8b207tv0hcx1ink20nlfmbb&amp;access_token=pk.eyJ1IjoiaGFubWluc2VpbiIsImEiOiJjam9meTJicXYwOWQxM3FwaWV6ZmtlMWUwIn0.HZGr8SY2AB5dgfVAtoOG0g"
+                target="_blank"
+                rel="noopener nofollow"
+                >Improve this map</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiaGFubWluc2VpbiIsImEiOiJjam9meTJicXYwOWQxM3FwaWV6ZmtlMWUwIn0.HZGr8SY2AB5dgfVAtoOG0g";
+      var map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/hanminsein/ck8b207tv0hcx1ink20nlfmbb",
+        center: [96.97205, 18.257544],
+        zoom: 4.6
+      });
+
+      var size = 200;
+
+      // implementation of CustomLayerInterface to draw a pulsing dot icon on the map
+      // see https://docs.mapbox.com/mapbox-gl-js/api/#customlayerinterface for more info
+      var pulsingDot = {
+        width: size,
+        height: size,
+        data: new Uint8Array(size * size * 4),
+
+        // get rendering context for the map canvas when layer is added to the map
+        onAdd: function() {
+          var canvas = document.createElement("canvas");
+          canvas.width = this.width;
+          canvas.height = this.height;
+          this.context = canvas.getContext("2d");
+        },
+
+        // called once before every frame where the icon will be used
+        render: function() {
+          var duration = 1000;
+          var t = (performance.now() % duration) / duration;
+
+          var radius = (size / 2) * 0.3;
+          var outerRadius = (size / 2) * 0.7 * t + radius;
+          var context = this.context;
+
+          // draw outer circle
+          context.clearRect(0, 0, this.width, this.height);
+          context.beginPath();
+          context.arc(
+            this.width / 2,
+            this.height / 2,
+            outerRadius,
+            0,
+            Math.PI * 2
+          );
+          context.fillStyle = "rgba(255, 200, 200," + (1 - t) + ")";
+          context.fill();
+
+          // draw inner circle
+          context.beginPath();
+          context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2);
+          context.fillStyle = "rgba(255, 100, 100, 1)";
+          context.strokeStyle = "white";
+          context.lineWidth = 2 + 4 * (1 - t);
+          context.fill();
+          context.stroke();
+
+          // update this image's data with data from the canvas
+          this.data = context.getImageData(0, 0, this.width, this.height).data;
+
+          // continuously repaint the map, resulting in the smooth animation of the dot
+          map.triggerRepaint();
+
+          // return `true` to let the map know that the image was updated
+          return true;
+        }
+      };
+
+      map.on("load", function() {
+        map.addImage("pulsing-dot", pulsingDot, { pixelRatio: 4 });
+
+        map.addSource("places", {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    '<strong>Case 4</strong><p>နေရပ်-ချမ်းမြသာစည်မြို့နယ်၊ မန္တလေးတိုင်း, ဆေးရုံ-ကန်တော်နဒီဆေးရုံ, အသက်- ၃၃ နှစ်, နိုင်ငံသား- အမေရိကန်, ခရီးသွားရာဇဝင်- အမေရိကန်, အတည်ပြုရက်- ၂၇၊၀၃၊၂၀၂၀, <a href="https://i.imgur.com/phE9CeD.jpg" target="_blank" title="Opens in a new window">ခရီးသွားအသေးစိတ်ကြည့်ရန်</a></p>',
+                  title: "4"
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [96.1335014, 21.9152798]
+                }
+              }, // case04_mdy_cmts
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Case 1</strong><p>နေရပ်-ချင်းပြည်နယ်၊ တီးတိန်မြို့, ဆေးရုံ-တီးတိန်ဆေးရုံ, အသက်- ၃၆ နှစ်, နိုင်ငံသား- အမေရိကန်, ခရီးသွားရာဇဝင်- အမေရိကန်, အတည်ပြုရက်- ၂၃၊၀၃၊၂၀၂၀</p>",
+                  title: "1"
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [93.6426, 23.3739]
+                }
+              }, // case01_chin_tedim
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Case 2</strong><p>နေရပ်-ဗိုလ်တစ်ထောင်မြို့နယ်၊ ရန်ကုန်တိုင်း, ဆေးရုံ-ဝေဘာဂီဆေးရုံ, အသက်- ၂၆ နှစ်, နိုင်ငံသား- မြန်မာ ခရီးသွားရာဇဝင်- ဗြိတိန် အတည်ပြုရက်- ၂၃၊၀၃၊၂၀၂၀, previously hospitalized in Mhawbi Dhamaduta Monastery</p>",
+                  title: "2"
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [96.0582, 17.1431]
+                }
+              }, // case02_ygn_bo1000_Dhammaduta
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Case 5</strong><p>နေရပ်-မင်္ဂလာတောင်ညွန့်မြို့နယ်၊ ရန်ကုန်တိုင်း, ဆေးရုံ-ဝေဘာဂီဆေးရုံ, အသက်- ၆၉ နှစ်, နိုင်ငံသား- မြန်မာ, ခရီးသွားရာဇဝင်- ဩစတေးလျ၊ စင်ကာပူ အတည်ပြုရက်- ၂၇၊၀၃၊၂၀၂၀, previously hospitalized in Yangon General Hospital</p>",
+                  title: "5"
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [96.1685, 16.7862]
+                }
+              }, // case05_ygn_mgltn
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Case 3</strong><p>နေရပ်-တောင်သူကုန်းရပ်ကွက်၊ ကွင်းမွှေး ၃ လမ်း၊ အင်းစိန်မြို့နယ်၊ ရန်ကုန်တိုင်း, ဆေးရုံ-ဝေဘာဂီဆေးရုံ, အသက်- ၂၆ နှစ်, နိုင်ငံသား- မြန်မာ ခရီးသွားရာဇဝင်- ဗြိတိန်, အတည်ပြုရက်- ၂၅၊၀၃၊၂၀၂၀</p>",
+                  title: "3"
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [96.1098, 16.8979]
+                }
+              }, // case03_ygn_isn
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Case 6</strong><p>နေရပ်-အင်းစိန်မြို့နယ်၊ ရန်ကုန်တိုင်း, ဆေးရုံ-ဝေဘာဂီဆေးရုံ, အသက်- ၂၉ နှစ်, နိုင်ငံသား- မြန်မာ ခရီးသွားရာဇဝင်- ဗြိတိန်, အတည်ပြုရက်- ၂၈၊၀၃၊၂၀၂၀, linked with Case 3</p>",
+                  title: "6"
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [96.10973, 16.8863]
+                }
+              }, // case06_ygn_isn
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    '<strong>Case 7</strong><p>နေရပ်-ဗဟန်းမြို့နယ်၊ ရန်ကုန်တိုင်း, ဆေးရုံ-ရန်ကုန်ပြည်သူ့ဆေးရုံကြီး, အသက်- ၆၀ နှစ်, နိုင်ငံသား- မြန်မာ, ခရီးသွားရာဇဝင်- မရှိ, အတည်ပြုရက်- ၂၈၊၀၃၊၂၀၂၀, <a href="https://i.imgur.com/KNauWl2.png" target="_blank" title="Opens in a new window">ခရီးသွားအသေးစိတ်ကြည့်ရန်</a></p>',
+                  title: "8"
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [96.1638, 16.8226]
+                }
+              }, // case07_ygn_bhn
+              {
+                type: "Feature",
+                properties: {
+                  description:
+                    "<strong>Case 8</strong><p>နေရပ်- Lake Garden Hotel, နေပြည်တော်, ဆေးရုံ-နေပြည်တော် ကုတင် ၁၀၀၀ ဆေးရုံ, အသက်- ၅၈ နှစ်, နိုင်ငံသား- ဆွစ်ဇာလန်, ခရီးသွားရာဇဝင်- ဆွစ်ဇာလန်, အတည်ပြုရက်- ၂၈၊၀၃၊၂၀၂၀, linked with her father positive case in Swiss</p>",
+                  title: "7"
+                },
+                geometry: {
+                  type: "Point",
+                  coordinates: [96.0956, 19.6968]
+                }
+              } // case08_npt
+            ]
+          }
+        });
+        map.addLayer({
+          id: "places",
+          type: "symbol",
+          source: "places",
+          layout: {
+            "text-field": ["get", "title"],
+            "text-variable-anchor": ["top", "bottom", "left", "right"],
+            "text-radial-offset": 0.5,
+            "text-justify": "auto",
+            "icon-image": "pulsing-dot"
+          }
+        });
+      });
+      map.on("click", "places", function(e) {
+        var coordinates = e.features[0].geometry.coordinates.slice();
+        var description = e.features[0].properties.description;
+
+        // Ensure that if the map is zoomed out such that multiple
+        // copies of the feature are visible, the popup appears
+        // over the copy being pointed to.
+        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+          coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        }
+
+        new mapboxgl.Popup()
+          .setLngLat(coordinates)
+          .setHTML(description)
+          .addTo(map);
+      });
+
+      // Change the cursor to a pointer when the mouse is over the places layer.
+      map.on("mouseenter", "places", function() {
+        map.getCanvas().style.cursor = "pointer";
+      });
+
+      // Change it back to a pointer when it leaves.
+      map.on("mouseleave", "places", function() {
+        map.getCanvas().style.cursor = "";
+      });
+    </script>
+
+    <title>Example</title>
+
+    <!-- Styles -->
+    <style>
+      .example1 {
+        height: 24px;
+        overflow: hidden;
+        position: relative;
+      }
+      .example1 h3 {
+        font-size: 1em;
+        color: #2c3e50;
+        position: absolute;
+        width: 170%;
+        height: 100%;
+        margin: 0;
+        line-height: 23px;
+        text-align: center;
+        /* Starting position */
+        -moz-transform: translateX(100%);
+        -webkit-transform: translateX(100%);
+        transform: translateX(100%);
+        /* Apply animation to this element */
+        -moz-animation: example1 26s linear infinite;
+        -webkit-animation: example1 26s linear infinite;
+        animation: example1 26s linear infinite;
+      }
+      /* Move it (define the animation) */
+      @-moz-keyframes example1 {
+        0% {
+          -moz-transform: translateX(100%);
+        }
+        100% {
+          -moz-transform: translateX(-100%);
+        }
+      }
+      @-webkit-keyframes example1 {
+        0% {
+          -webkit-transform: translateX(100%);
+        }
+        100% {
+          -webkit-transform: translateX(-100%);
+        }
+      }
+      @keyframes example1 {
+        0% {
+          -moz-transform: translateX(100%); /* Firefox bug fix */
+          -webkit-transform: translateX(100%); /* Firefox bug fix */
+          transform: translateX(100%);
+        }
+        100% {
+          -moz-transform: translateX(-100%); /* Firefox bug fix */
+          -webkit-transform: translateX(-100%); /* Firefox bug fix */
+          transform: translateX(-100%);
+        }
+      }
+    </style>
+
+    <!-- HTML -->
+    <div class="example1">
+      <h3>
+        📋 Total cases 8/ New cases 3 / Death 0 / Recovered 0 / 27/03/2020
+        Source :MOHS/ Breaking News : Myanmar bans all commercial flights to
+        land at all Int'l airports. 29/03/2020 Source : DCA
+      </h3>
+    </div>
+  </body>
+</html>

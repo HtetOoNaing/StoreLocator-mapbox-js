@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Add an animated icon to the map</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.9.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.9.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiaHRldG9vbmFpbmciLCJhIjoiY2pubmFpa2x2MDN0YTNwcGFzd2RxYjhucSJ9.-iNVlzJCPgH6n99e-tH4nw";
+      var map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/streets-v11",
+        center: [95.955971, 21.916222],
+        zoom: 7
+      });
+
+      var size = 150;
+
+      // implementation of CustomLayerInterface to draw a pulsing dot icon on the map
+      // see https://docs.mapbox.com/mapbox-gl-js/api/#customlayerinterface for more info
+      var pulsingDot = {
+        width: size,
+        height: size,
+        data: new Uint8Array(size * size * 4),
+
+        // get rendering context for the map canvas when layer is added to the map
+        onAdd: function() {
+          console.log("add");
+          var canvas = document.createElement("canvas");
+          canvas.width = this.width;
+          canvas.height = this.height;
+          this.context = canvas.getContext("2d");
+        },
+
+        // called once before every frame where the icon will be used
+        render: function() {
+          var duration = 1000;
+          var t = (performance.now() % duration) / duration;
+
+          var radius = (size / 2) * 0.3;
+          var outerRadius = (size / 2) * t + radius;
+          var context = this.context;
+          console.log(context);
+
+          // draw outer circle
+          context.clearRect(0, 0, this.width, this.height);
+          context.beginPath();
+          context.arc(
+            this.width / 2,
+            this.height / 2,
+            outerRadius,
+            0,
+            Math.PI * 2
+          );
+          context.fillStyle = "rgba(255, 200, 200," + (1 - t) + ")";
+          context.fill();
+
+          // draw inner circle
+          context.beginPath();
+          context.arc(this.width / 2, this.height / 2, radius, 0, Math.PI * 2);
+          context.fillStyle = "rgba(255, 100, 100, 1)";
+          context.strokeStyle = "white";
+          context.lineWidth = 2 + 4 * (1 - t);
+          context.fill();
+          context.stroke();
+
+          // update this image's data with data from the canvas
+          this.data = context.getImageData(0, 0, this.width, this.height).data;
+
+          // continuously repaint the map, resulting in the smooth animation of the dot
+          map.triggerRepaint();
+
+          // return `true` to let the map know that the image was updated
+          return true;
+        }
+      };
+
+      let geojson = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.1561127, 16.8052807]
+            },
+            properties: {
+              place_name: "Yangon",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.0835876, 21.9747295]
+            },
+            properties: {
+              place_name: "Mandalay",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.1297226, 19.7450008]
+            },
+            properties: {
+              place_name: "Nay Pyi Taw",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.6282501, 16.4905109]
+            },
+            properties: {
+              place_name: "Mawlamyine",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.4813538, 17.3352108]
+            },
+            properties: {
+              place_name: "Bago",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [94.7321167, 16.7791901]
+            },
+            properties: {
+              place_name: "Pathein",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.1358337, 22.1085606]
+            },
+            properties: {
+              place_name: "Monywa",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.0377579, 20.7891903]
+            },
+            properties: {
+              place_name: "Taunggyi",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [98.1915131, 14.0823002]
+            },
+            properties: {
+              place_name: "Dawei",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.2221603, 18.8246403]
+            },
+            properties: {
+              place_name: "Pyay",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.4570465, 17.6494408]
+            },
+            properties: {
+              place_name: "Hinthada",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.7498016, 22.9358997]
+            },
+            properties: {
+              place_name: "Lashio",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.0843811, 21.3348904]
+            },
+            properties: {
+              place_name: "Pakokku",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [93.6166687, 22.6499996]
+            },
+            properties: {
+              place_name: "Hakha",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [94.932457, 20.1495609]
+            },
+            properties: {
+              place_name: "Magway",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.3700104, 16.9186707]
+            },
+            properties: {
+              place_name: "Thaton",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.3963699, 25.3832703]
+            },
+            properties: {
+              place_name: "Myitkyina",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.2097473, 19.6779804]
+            },
+            properties: {
+              place_name: "Loikaw",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.466667, 21.366667]
+            },
+            properties: {
+              place_name: "Bagan",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.4568329, 22.0350094]
+            },
+            properties: {
+              place_name: "Pyin Oo Lwin",
+              description: "lab_confirmed"
+            }
+          }
+        ]
+      };
+
+      map.on("load", function() {
+        map.addImage("pulsing-dot", pulsingDot, { pixelRatio: 2 });
+
+        map.addSource("points", {
+          type: "geojson",
+          data: geojson
+        });
+        map.addLayer({
+          id: "points",
+          type: "symbol",
+          source: "points",
+          layout: {
+            "icon-image": "pulsing-dot"
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

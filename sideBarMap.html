@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Store Locator</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700"
+      rel="stylesheet"
+    />
+    <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v1.8.1/mapbox-gl.js"></script>
+    <link
+      href="https://api.tiles.mapbox.com/mapbox-gl-js/v1.8.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <style>
+      body {
+        color: #404040;
+        font: 400 15px/22px "Source Sans Pro", "Helvetica Neue", Sans-serif;
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      * {
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+      }
+
+      .sidebar {
+        position: absolute;
+        width: 33.3333%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        overflow: hidden;
+        border-right: 1px solid rgba(0, 0, 0, 0.25);
+      }
+      .pad2 {
+        padding: 20px;
+      }
+
+      .map {
+        position: absolute;
+        left: 33.3333%;
+        width: 66.6666%;
+        top: 0;
+        bottom: 0;
+      }
+
+      h1 {
+        font-size: 22px;
+        margin: 0;
+        font-weight: 400;
+        line-height: 20px;
+        padding: 20px 2px;
+      }
+
+      a {
+        color: #404040;
+        text-decoration: none;
+      }
+
+      a:hover {
+        color: #101010;
+      }
+
+      .heading {
+        background: #fff;
+        border-bottom: 1px solid #eee;
+        min-height: 60px;
+        line-height: 60px;
+        padding: 0 10px;
+        background-color: #00853e;
+        color: #fff;
+      }
+
+      .listings {
+        height: 100%;
+        overflow: auto;
+        padding-bottom: 60px;
+      }
+
+      .listings .item {
+        display: block;
+        border-bottom: 1px solid #eee;
+        padding: 10px;
+        text-decoration: none;
+      }
+
+      .listings .item:last-child {
+        border-bottom: none;
+      }
+      .listings .item .title {
+        display: block;
+        color: #00853e;
+        font-weight: 700;
+      }
+
+      .listings .item .title small {
+        font-weight: 400;
+      }
+      .listings .item.active .title,
+      .listings .item .title:hover {
+        color: #8cc63f;
+      }
+      .listings .item.active {
+        background-color: #f8f8f8;
+      }
+      ::-webkit-scrollbar {
+        width: 3px;
+        height: 3px;
+        border-left: 0;
+        background: rgba(0, 0, 0, 0.1);
+      }
+      ::-webkit-scrollbar-track {
+        background: none;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #00853e;
+        border-radius: 0;
+      }
+
+      .marker {
+        color: red;
+        font-weight: bold;
+        font-size: 25px;
+        cursor: pointer;
+      }
+
+      .clearfix {
+        display: block;
+      }
+      .clearfix:after {
+        content: ".";
+        display: block;
+        height: 0;
+        clear: both;
+        visibility: hidden;
+      }
+
+      /* Marker tweaks */
+      .mapboxgl-popup {
+        padding-bottom: 25px;
+      }
+
+      .mapboxgl-popup-close-button {
+        display: none;
+      }
+      .mapboxgl-popup-content {
+        font: 400 15px/22px "Source Sans Pro", "Helvetica Neue", Sans-serif;
+        padding: 0;
+        width: 180px;
+      }
+      .mapboxgl-popup-content-wrapper {
+        padding: 1%;
+      }
+      .mapboxgl-popup-content h3 {
+        background: #91c949;
+        color: #fff;
+        margin: 0;
+        display: block;
+        padding: 10px;
+        border-radius: 3px 3px 0 0;
+        font-weight: 700;
+        margin-top: -15px;
+      }
+
+      .mapboxgl-popup-content h4 {
+        margin: 0;
+        display: block;
+        padding: 10px 10px 10px 10px;
+        font-weight: 400;
+      }
+
+      .mapboxgl-popup-content div {
+        padding: 10px;
+      }
+
+      .mapboxgl-container .leaflet-marker-icon {
+        cursor: pointer;
+      }
+
+      .mapboxgl-popup-anchor-top > .mapboxgl-popup-content {
+        margin-top: 15px;
+      }
+
+      .mapboxgl-popup-anchor-top > .mapboxgl-popup-tip {
+        border-bottom-color: #91c949;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sidebar">
+      <div class="heading">
+        <h1>Our locations</h1>
+      </div>
+      <div id="listings" class="listings"></div>
+    </div>
+    <div id="map" class="map"></div>
+    <script>
+      // This will let you use the .remove() function later on
+      if (!("remove" in Element.prototype)) {
+        Element.prototype.remove = function() {
+          if (this.parentNode) {
+            this.parentNode.removeChild(this);
+          }
+        };
+      }
+
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiaHRldG9vbmFpbmciLCJhIjoiY2pubmFpa2x2MDN0YTNwcGFzd2RxYjhucSJ9.-iNVlzJCPgH6n99e-tH4nw";
+      /**
+       * Add the map to the page
+       */
+      var map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/streets-v11",
+        center: [95.955971, 21.916222],
+        zoom: 8,
+        scrollZoom: false
+      });
+
+      let geojson = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.1561127, 16.8052807]
+            },
+            properties: {
+              place_name: "Yangon",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.0835876, 21.9747295]
+            },
+            properties: {
+              place_name: "Mandalay",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.1297226, 19.7450008]
+            },
+            properties: {
+              place_name: "Nay Pyi Taw",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.6282501, 16.4905109]
+            },
+            properties: {
+              place_name: "Mawlamyine",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.4813538, 17.3352108]
+            },
+            properties: {
+              place_name: "Bago",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [94.7321167, 16.7791901]
+            },
+            properties: {
+              place_name: "Pathein",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.1358337, 22.1085606]
+            },
+            properties: {
+              place_name: "Monywa",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.0377579, 20.7891903]
+            },
+            properties: {
+              place_name: "Taunggyi",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [98.1915131, 14.0823002]
+            },
+            properties: {
+              place_name: "Dawei",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.2221603, 18.8246403]
+            },
+            properties: {
+              place_name: "Pyay",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.4570465, 17.6494408]
+            },
+            properties: {
+              place_name: "Hinthada",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.7498016, 22.9358997]
+            },
+            properties: {
+              place_name: "Lashio",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.0843811, 21.3348904]
+            },
+            properties: {
+              place_name: "Pakokku",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [93.6166687, 22.6499996]
+            },
+            properties: {
+              place_name: "Hakha",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [94.932457, 20.1495609]
+            },
+            properties: {
+              place_name: "Magway",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.3700104, 16.9186707]
+            },
+            properties: {
+              place_name: "Thaton",
+              description: "visited_places"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.3963699, 25.3832703]
+            },
+            properties: {
+              place_name: "Myitkyina",
+              description: "lab_confirmed"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [97.2097473, 19.6779804]
+            },
+            properties: {
+              place_name: "Loikaw",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [95.466667, 21.366667]
+            },
+            properties: {
+              place_name: "Bagan",
+              description: "quarantine"
+            }
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: [96.4568329, 22.0350094]
+            },
+            properties: {
+              place_name: "Pyin Oo Lwin",
+              description: "lab_confirmed"
+            }
+          }
+        ]
+      };
+
+      geojson.features.forEach(function(feature, i) {
+        feature.properties.id = i;
+      });
+
+      map.on("load", function(e) {
+        map.addSource("places", {
+          type: "geojson",
+          data: geojson
+        });
+
+        buildLocationList(geojson);
+        addMarkers();
+      });
+
+      /**
+       * Add a marker to the map for every store listing.
+       **/
+      function addMarkers() {
+        /* For each feature in the GeoJSON object above: */
+        geojson.features.forEach(function(marker) {
+          /* Create a div element for the marker. */
+          var el = document.createElement("div");
+          /* Assign a unique `id` to the marker. */
+          el.id = "marker-" + marker.properties.id;
+          /* Assign the `marker` class to each marker for styling. */
+          el.className = "marker";
+
+          if (marker.properties.description == "lab_confirmed") {
+            el.innerHTML = "<i class='far fa-dot-circle'></i>";
+          } else if (marker.properties.description == "quarantine") {
+            el.innerHTML =
+              "<i class='far fa-dot-circle' style='color:#6600cc;'></i>";
+          } else {
+            el.innerHTML =
+              "<i class='far fa-dot-circle' style='color:#0066ff;'></i>";
+          }
+
+          new mapboxgl.Marker(el, { offset: [0, -23] })
+            .setLngLat(marker.geometry.coordinates)
+            .addTo(map);
+
+          el.addEventListener("click", function(e) {
+            /* Fly to the point */
+            flyToStore(marker);
+            /* Close all other popups and display popup for clicked store */
+            createPopUp(marker);
+            /* Highlight listing in sidebar */
+            var activeItem = document.getElementsByClassName("active");
+            e.stopPropagation();
+            if (activeItem[0]) {
+              activeItem[0].classList.remove("active");
+            }
+            var listing = document.getElementById(
+              "listing-" + marker.properties.id
+            );
+            listing.classList.add("active");
+          });
+        });
+      }
+
+      /**
+       * Add a listing for each store to the sidebar.
+       **/
+      function buildLocationList(data) {
+        data.features.forEach(function(feature, i) {
+          var prop = feature.properties;
+
+          /* Add a new listing section to the sidebar. */
+          var listings = document.getElementById("listings");
+          var listing = listings.appendChild(document.createElement("div"));
+          /* Assign a unique `id` to the listing. */
+          listing.id = "listing-" + prop.id;
+          /* Assign the `item` class to each listing for styling. */
+          listing.className = "item";
+
+          /* Add the link to the individual listing created above. */
+          var link = listing.appendChild(document.createElement("a"));
+          link.href = "#";
+          link.className = "title";
+          link.id = "link-" + prop.id;
+          link.innerHTML = prop.place_name;
+
+          /* Add details to the individual listing. */
+          var details = listing.appendChild(document.createElement("div"));
+          details.innerHTML = prop.description;
+          //   if (prop.phone) {
+          //     details.innerHTML += " · " + prop.phoneFormatted;
+          //   }
+
+          link.addEventListener("click", function(e) {
+            console.log("out", this.id);
+            for (var i = 0; i < data.features.length; i++) {
+              console.log("in", this.id);
+              if (this.id === "link-" + data.features[i].properties.id) {
+                var clickedListing = data.features[i];
+                flyToStore(clickedListing);
+                createPopUp(clickedListing);
+              }
+            }
+            var activeItem = document.getElementsByClassName("active");
+            if (activeItem[0]) {
+              activeItem[0].classList.remove("active");
+            }
+            this.parentNode.classList.add("active");
+          });
+        });
+      }
+
+      /**
+       * Use Mapbox GL JS's `flyTo` to move the camera smoothly
+       * a given center point.
+       **/
+      function flyToStore(currentFeature) {
+        map.flyTo({
+          center: currentFeature.geometry.coordinates,
+          zoom: 13
+        });
+      }
+
+      /**
+       * Create a Mapbox GL JS `Popup`.
+       **/
+      function createPopUp(currentFeature) {
+        var popUps = document.getElementsByClassName("mapboxgl-popup");
+        if (popUps[0]) popUps[0].remove();
+        var popup = new mapboxgl.Popup({ closeOnClick: false })
+          .setLngLat(currentFeature.geometry.coordinates)
+          .setHTML(
+            "<h3>" +
+              currentFeature.properties.description +
+              "</h3>" +
+              "<h4>" +
+              currentFeature.properties.description +
+              "</h4>"
+          )
+          .addTo(map);
+      }
+    </script>
+  </body>
+</html>
