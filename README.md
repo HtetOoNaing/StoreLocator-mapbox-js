@@ -12,3 +12,7 @@
 - custom marker map
 - animated icon map
 - map with autocomplete textbox
+
+### Resources
+
+https://www.mapbox.com/
