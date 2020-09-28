@@ -1,5 +1,7 @@
 # StoreLocator-mapbox-js
 
+This is testing project for covid-mm.info
+
 ## Used Technology
 
 - Mapbox
